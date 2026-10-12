@@ -1,46 +1,62 @@
-"""Smoke tests for tmdb_client (L7: unit testing). All network calls mocked."""
 from tmdb_client import MOVIE_IDS, fetch_movie, load_offline_backup
 
 
-class _Resp:
-    def __init__(self, payload, status=200):
-        self._p = payload
+class FakeResponse:
+    def __init__(self, data, status):
+        self.data = data
         self.status_code = status
 
     def json(self):
-        return self._p
-
-    def raise_for_status(self):
-        if self.status_code >= 400:
-            raise Exception(f"http {self.status_code}")
+        return self.data
 
 
-class _Session:
+class FakeInternet:
     def __init__(self, movie, credits):
-        self.movie, self.credits = movie, credits
+        self.movie = movie
+        self.credits = credits
 
-    def get(self, url, timeout=None):
+    def get(self, url, params=None, timeout=None):
         if url.endswith("/credits"):
-            return _Resp(self.credits)
-        return _Resp(self.movie, 200 if self.movie else 404)
+            return FakeResponse(self.credits, 200)
+        if self.movie is None:
+            return FakeResponse(None, 404)
+        return FakeResponse(self.movie, 200)
 
 
 def test_movie_ids_match_lab_spec():
     assert len(MOVIE_IDS) == 19
-    assert MOVIE_IDS[0] == 0  # invalid ID exercises error handling
+    assert MOVIE_IDS[0] == 0
 
 
-def test_fetch_movie_merges_credits():
-    movie = {"id": 597, "title": "Titanic", "budget": 200000000}
-    credits = {"cast": [{"name": "A"}, {"name": "B"}],
-               "crew": [{"name": "Cameron", "job": "Director"}]}
-    rec = fetch_movie(_Session(movie, credits), "http://x", 597)
-    assert rec["director"] == "Cameron"
-    assert rec["cast_size"] == 2
+def test_fetch_movie_merges_credits(monkeypatch):
+    import tmdb_client
+
+    fake_movie = {"id": 597, "title": "Titanic", "budget": 200000000}
+    fake_credits = {
+        "cast": [{"name": "A"}, {"name": "B"}],
+        "crew": [{"name": "Cameron", "job": "Director"}],
+    }
+    fake = FakeInternet(fake_movie, fake_credits)
+
+    def fake_get(url, params=None, timeout=None):
+        return fake.get(url, params=params, timeout=timeout)
+
+    monkeypatch.setattr(tmdb_client.requests, "get", fake_get)
+
+    out = fetch_movie(597, "fake-key", "http://x")
+    assert out["director"] == "Cameron"
+    assert out["cast_size"] == 2
+    assert out["cast"] == ["A", "B"]
 
 
-def test_fetch_movie_404_returns_none():
-    assert fetch_movie(_Session(None, {}), "http://x", 0) is None
+def test_fetch_movie_404_returns_none(monkeypatch):
+    import tmdb_client
+
+    def fake_get_404(url, params=None, timeout=None):
+        return FakeResponse(None, 404)
+
+    monkeypatch.setattr(tmdb_client.requests, "get", fake_get_404)
+    assert fetch_movie(0, "fake-key", "http://x") is None
 
 
 def test_offline_backup_loads(tmp_path):

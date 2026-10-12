@@ -1,104 +1,109 @@
-"""TMDB API client for the DEM02 lab (Step 1: Fetch Movie Data from API).
-
-Reads the v3 API key from `.env` (never hardcode it), fetches each fixed
-movie ID from `/movie/{id}` plus `/movie/{id}/credits` (cast + director),
-and returns a list of raw dicts ready for ``pd.DataFrame``.
-
-Falls back to the offline backup (``OFFLINE_BACKUP_PATH``) when the network
-or API is unreachable -- Step 1 must never block.
-"""
-from __future__ import annotations
-
 import json
-import logging
 import os
 import time
-from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
 
-log = logging.getLogger("tmdb_client")
-
-# Fixed lab movie IDs (lab spec, Step 1). 0 is intentionally invalid and
-# exercises the error-handling path (L7: robust ETL scripts).
 MOVIE_IDS = [
     0, 299534, 19995, 140607, 299536, 597, 135397,
     420818, 24428, 168259, 99861, 284054, 12445,
     181808, 330457, 351286, 109445, 321612, 260513,
 ]
 
-TIMEOUT_S = 20
-RETRYABLE = (429, 500, 502, 503, 504)
+TIMEOUT = 20
 
 
-def _session(api_key: str) -> requests.Session:
-    s = requests.Session()
-    s.params = {"api_key": api_key}  # v3 query-param auth (see TMDB auth docs)
-    s.headers.update({"Accept": "application/json"})
-    return s
-
-
-def fetch_movie(session: requests.Session, base_url: str, movie_id: int) -> dict | None:
-    """One movie + its credits. None when the ID is invalid (e.g. 0)."""
+def fetch_movie(movie_id, api_key, base_url):
+    url = base_url + "/movie/" + str(movie_id)
     try:
-        r = session.get(f"{base_url}/movie/{movie_id}", timeout=TIMEOUT_S)
-        if r.status_code == 404:
-            log.warning("movie %s not found (404), skipping", movie_id)
-            return None
-        if r.status_code in RETRYABLE:
-            time.sleep(1.5)
-            r = session.get(f"{base_url}/movie/{movie_id}", timeout=TIMEOUT_S)
-        r.raise_for_status()
-        movie = r.json()
-        try:
-            c = session.get(f"{base_url}/movie/{movie_id}/credits", timeout=TIMEOUT_S)
-            c.raise_for_status()
-            movie["cast"] = [m.get("name") for m in c.json().get("cast", [])]
-            crew = c.json().get("crew", [])
-            movie["director"] = next(
-                (m.get("name") for m in crew if m.get("job") == "Director"), None)
-            movie["cast_size"] = len(movie["cast"])
-            movie["crew_size"] = len(crew)
-        except requests.RequestException as e:
-            log.warning("credits for %s failed (%s); continuing without them", movie_id, e)
-        return movie
-    except requests.RequestException as e:
-        log.error("fetch movie %s failed: %s", movie_id, e)
+        r = requests.get(url, params={"api_key": api_key}, timeout=TIMEOUT)
+    except Exception as e:
+        print("network error", movie_id, e)
         return None
 
+    if r.status_code == 404:
+        print("movie", movie_id, "not found, skip it")
+        return None
 
-def load_offline_backup(path: str | Path) -> list[dict]:
-    """Offline backup: a JSON list of movie dicts shaped like API responses."""
-    records = json.loads(Path(path).read_text(encoding="utf-8"))
-    log.info("loaded %d records from offline backup %s", len(records), path)
-    return records
+    if r.status_code in (429, 500, 502, 503, 504):
+        time.sleep(1.5)
+        try:
+            r = requests.get(url, params={"api_key": api_key}, timeout=TIMEOUT)
+        except Exception as e:
+            print("retry failed", movie_id, e)
+            return None
+
+    if r.status_code != 200:
+        print("skip movie", movie_id, r.status_code)
+        return None
+
+    movie = r.json()
+
+    credits_url = base_url + "/movie/" + str(movie_id) + "/credits"
+    try:
+        cr = requests.get(credits_url, params={"api_key": api_key}, timeout=TIMEOUT)
+        credits = cr.json()
+
+        cast_list = credits.get("cast", [])
+        names = []
+        for p in cast_list:
+            if "name" in p:
+                names.append(p["name"])
+        movie["cast"] = names
+        movie["cast_size"] = len(names)
+
+        crew_list = credits.get("crew", [])
+        director = None
+        for p in crew_list:
+            if p.get("job") == "Director":
+                director = p.get("name")
+                break
+        movie["director"] = director
+        movie["crew_size"] = len(crew_list)
+    except Exception as e:
+        print("credits problem", movie_id, e)
+
+    return movie
 
 
-def fetch_all(movie_ids: list[int] | None = None) -> list[dict]:
-    """Fetch every ID; on network failure use the offline backup instead."""
+def load_offline_backup(path):
+    f = open(path, "r", encoding="utf-8")
+    data = json.load(f)
+    f.close()
+    print("loaded backup", len(data), "movies")
+    return data
+
+
+def fetch_all(movie_ids=None):
+    load_dotenv()
     api_key = os.getenv("TMDB_API_KEY", "")
     base_url = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3")
     backup = os.getenv("OFFLINE_BACKUP_PATH", "data/tmdb_backup.json")
-    ids = movie_ids if movie_ids is not None else MOVIE_IDS
-    if not api_key:
-        log.warning("TMDB_API_KEY not set; using offline backup %s", backup)
+
+    if movie_ids is None:
+        movie_ids = MOVIE_IDS
+
+    if api_key == "":
         return load_offline_backup(backup)
-    session = _session(api_key)
-    records = []
-    for mid in ids:
-        rec = fetch_movie(session, base_url, mid)
-        if rec is not None:
-            records.append(rec)
-        time.sleep(0.25)  # stay well under TMDB rate limits
-    if not records and Path(backup).exists():
-        log.warning("live fetch returned nothing; using offline backup")
+
+    out = []
+    for mid in movie_ids:
+        m = fetch_movie(mid, api_key, base_url)
+        if m is not None:
+            out.append(m)
+        time.sleep(0.25)
+
+    if len(out) == 0 and os.path.exists(backup):
         return load_offline_backup(backup)
-    return records
+
+    return out
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    recs = fetch_all()
-    Path("data").mkdir(exist_ok=True)
-    Path("data/raw_movies.json").write_text(json.dumps(recs, indent=1), encoding="utf-8")
-    print(f"stored {len(recs)} movie records -> data/raw_movies.json")
+    movies = fetch_all()
+    os.makedirs("data", exist_ok=True)
+    f = open("data/raw_movies.json", "w", encoding="utf-8")
+    json.dump(movies, f, indent=1)
+    f.close()
+    print("saved", len(movies), "movies")
