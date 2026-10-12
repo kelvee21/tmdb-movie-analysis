@@ -1,0 +1,14 @@
+# Secrets: the live key lives in `.env`, which must never be committed.
+.env
+# Fetched / backup data: large, regenerable, sometimes key-adjacent.
+data/*.json
+!data/.gitkeep
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+# Jupyter
+.ipynb_checkpoints/
+# Reports: build from source; the .docx is a deliverable you attach, not version.
+reports/*.docx

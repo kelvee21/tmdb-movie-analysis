@@ -1,0 +1,9 @@
+# DEM02 lab dependencies: standard data-engineering stack + report tooling.
+pandas>=2.0
+numpy>=1.26
+requests>=2.31
+matplotlib>=3.8
+python-dotenv>=1.0
+jupyter>=1.0
+pytest>=8.0
+python-docx>=1.1
