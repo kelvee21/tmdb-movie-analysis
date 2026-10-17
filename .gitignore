@@ -12,3 +12,6 @@ venv/
 .ipynb_checkpoints/
 # Reports: build from source; the .docx is a deliverable you attach, not version.
 reports/*.docx
+reports/*.png
+.python-version
+.vscode/
