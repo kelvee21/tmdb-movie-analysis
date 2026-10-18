@@ -10,11 +10,12 @@ __pycache__/
 venv/
 # Jupyter
 .ipynb_checkpoints/
-# Reports: build from source; the .docx is a deliverable you attach, not version.
-reports/*.docx
+# Reports: the docx is the deliverable and is committed. The pdf, the chart
+# images and any build script are not.
 reports/*.pdf
 reports/*.png
 reports/*.py
+!reports/TMDB_Movie_Data_Analysis_Report.docx
 # My own prep notes for the review. Not a lab deliverable.
 docs/CODE_REVIEW.md
 docs/PRESENTATION.md
