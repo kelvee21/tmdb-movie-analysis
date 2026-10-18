@@ -68,6 +68,11 @@ def fetch_movie(movie_id, api_key, base_url):
 
 
 def load_offline_backup(path):
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            "no TMDB_API_KEY in .env and no backup at " + path +
+            ". put a key in .env, or put the backup json back in data/."
+        )
     f = open(path, "r", encoding="utf-8")
     data = json.load(f)
     f.close()

@@ -36,6 +36,7 @@ try it: fetch id 597, print title, budget. fetch id 0, see 404 and skip.
 - df[cond]. sort with sort_values(by="x", ascending=False). head(5) takes top 5.
 - drop_duplicates(subset=["id", "title"]). I use subset because cast col is a list and full dup check crashes.
 - dropna(subset=["id", "title"]) drops rows with no id. dropna(thresh=10) keeps rows with 10+ values.
+- df[col].value_counts(dropna=False) to see what values turned up in a column I built. I run it on the joined columns before I trust them, otherwise a typo like "Sci Fi" just sits there.
 - groupby("group").mean() and .sum(), .size() for counts.
 - pd.isna(v) and pd.notna(v) to test empty. `v == v` is False for NaN but isna is clearer.
 - str(row["genres"]) turns list or NaN to text so `in` works and never crashes.
@@ -49,6 +50,8 @@ practice: load backup json, print titles, check dtypes, try sort by revenue.
 3. genres, spoken_languages, companies, countries, cast lists -> "A|B" text. I loop items, pick key, join with + "|" +.
 4. numbers and dates with to_numeric / to_datetime.
 5. 0 to NaN for budget, revenue, runtime. new budget_musd, revenue_musd. vote_average to NaN where vote_count == 0. "No Data" and "" to NaN.
+   the vote_average one uses df.loc[mask, col] = nan, not df["col"].iloc[i] = nan. chained
+   assignment is dropped by pandas 3 and it fails silently, the value just stays.
 6. keep status == "Released", then delete status col. drop dupes, drop no id/title, thresh 10.
 7. keep FINAL_COLUMNS order, reset_index.
 
@@ -61,7 +64,7 @@ final check: list(df.columns) == FINAL_COLUMNS and len 18.
 - rank(col) = sort + head. ascending True means smallest first.
 - 10 ranks: revenue, budget, profit high/low, roi high/low with filter, votes, rating high/low with filter, popularity.
 - search: loop rows with iloc, test with `in`, collect True/False list, filter, sort. willis sorts by vote_average desc, thurman by runtime asc. here both are 0, that is fine, I say so in report.
-- franchise: new col group = "franchise" if collection not empty else "standalone". groupby mean.
+- franchise: new col group = "franchise" if collection not empty else "standalone". groupby. revenue, budget, popularity and rating use mean, roi uses median because one big film moves the mean and not the median.
 - top franchises / directors: get unique names with a loop, for each name filter table, use len, sum, mean, put in list of dicts, make DataFrame, sort by total_revenue desc.
 
 ## 6. plots
@@ -85,7 +88,10 @@ notebook shows with plt.show(). report saves with plt.savefig then add_picture.
 
 ## 7. tests and git
 
-- pytest runs files starting with test_. my tests use tiny DataFrames so they run offline.
+- pytest runs files starting with test_. my tests use tiny DataFrames or fake movie records so they run offline.
+- data/tmdb_backup.json is gitignored, so a test that opens it fails on a fresh clone. tests/helpers.py
+  load_records() uses the real backup if it is there and fake_movies() if not. fake_df() is always fake,
+  done_df() is real-or-fake. use fake_df() when the test checks a number.
 - python app/main.py prints got 18 movies and clean shape.
 - git add, git commit -m "short msg", git log --oneline to see week. git status must not show .env.
 
