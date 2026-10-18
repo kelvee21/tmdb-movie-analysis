@@ -12,6 +12,7 @@ venv/
 .ipynb_checkpoints/
 # Reports: build from source; the .docx is a deliverable you attach, not version.
 reports/*.docx
+reports/*.pdf
 reports/*.png
 reports/*.py
 # My own prep notes for the review. Not a lab deliverable.
