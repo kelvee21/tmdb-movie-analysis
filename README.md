@@ -14,12 +14,6 @@ python app/main.py
 
 open analysis.ipynb top to bottom.
 
-make report:
-
-```
-python reports/build_report.py
-```
-
 ## files
 
 - tmdb_client.py - fetch from api
@@ -27,4 +21,3 @@ python reports/build_report.py
 - src/kpis.py - profit, rank, search
 - src/visualize.py - 5 charts
 - analysis.ipynb - shows all steps
-- reports/build_report.py - makes docx

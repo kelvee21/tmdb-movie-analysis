@@ -12,15 +12,21 @@ def plot_revenue_vs_budget(df):
 
 
 def plot_roi_by_genre(df):
+    """Mean roi per genre, sorted, with the film count written on the tick.
+
+    with only 18 rows some genres have 1 or 2 films, so a bar on its own would
+    read as a finding when it is really one film. putting n= on the label makes
+    the reader see which bars are too thin to mean anything.
+    """
     genres = []
     for g in df["genres"]:
         if isinstance(g, str):
-            parts = g.split("|")
-            for p in parts:
+            for p in g.split("|"):
                 if p not in genres:
                     genres.append(p)
 
     means = []
+    counts = []
     for gen in genres:
         vals = []
         for i in range(len(df)):
@@ -31,6 +37,7 @@ def plot_roi_by_genre(df):
                 v = row["roi"]
                 if pd.notna(v):
                     vals.append(v)
+        counts.append(len(vals))
         if len(vals) > 0:
             s = 0
             for v in vals:
@@ -39,9 +46,13 @@ def plot_roi_by_genre(df):
         else:
             means.append(0)
 
+    order = sorted(range(len(genres)), key=lambda i: means[i], reverse=True)
+    labels = [f"{genres[i]}\n(n={counts[i]})" for i in order]
+    values = [means[i] for i in order]
+
     fig, ax = plt.subplots()
-    ax.bar(genres, means)
-    ax.set_xlabel("genre")
+    ax.bar(labels, values)
+    ax.set_xlabel("genre, with number of films")
     ax.set_ylabel("mean roi")
     ax.set_title("roi by genre")
     plt.xticks(rotation=45)

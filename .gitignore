@@ -13,6 +13,7 @@ venv/
 # Reports: build from source; the .docx is a deliverable you attach, not version.
 reports/*.docx
 reports/*.png
+reports/*.py
 # My own prep notes for the review. Not a lab deliverable.
 docs/CODE_REVIEW.md
 docs/PRESENTATION.md
