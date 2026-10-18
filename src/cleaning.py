@@ -60,9 +60,15 @@ def pipe_join_names(df, column, name_key):
 
 
 def inspect_anomalies(df, columns):
+    """Print value_counts for the columns i built, and give the counts back
+    so a test can check this actually ran."""
+    out = {}
     for col in columns:
         print(col)
-        print(df[col].value_counts(dropna=False).head(10))
+        counts = df[col].value_counts(dropna=False).head(10)
+        print(counts)
+        out[col] = counts
+    return out
 
 
 def convert_dtypes(df):
@@ -84,9 +90,10 @@ def clean_unrealistic_values(df):
         df2[col] = df2[col].replace(0, float("nan"))
     df2["budget_musd"] = df2["budget"] / 1000000
     df2["revenue_musd"] = df2["revenue"] / 1000000
-    for i in range(len(df2)):
-        if df2["vote_count"].iloc[i] == 0:
-            df2["vote_average"].iloc[i] = float("nan")
+    # a movie with no votes has a vote_average that means nothing, so it goes
+    # to NaN. .loc not .iloc, chained assignment is dropped by pandas 3.
+    no_votes = df2["vote_count"] == 0
+    df2.loc[no_votes, "vote_average"] = float("nan")
     for col in ["overview", "tagline"]:
         if col in df2.columns:
             df2[col] = df2[col].replace("No Data", float("nan"))

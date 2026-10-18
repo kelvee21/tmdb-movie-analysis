@@ -65,8 +65,8 @@ def franchise_vs_standalone(df):
     out = pd.DataFrame({
         "movies": g.size(),
         "mean_revenue": g["revenue_musd"].mean(),
+        "median_roi": g["roi"].median(),
         "mean_budget": g["budget_musd"].mean(),
-        "mean_roi": g["roi"].mean(),
         "mean_popularity": g["popularity"].mean(),
         "mean_rating": g["vote_average"].mean(),
     })
