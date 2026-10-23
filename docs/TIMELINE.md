@@ -31,12 +31,31 @@ top franchises and directors by total revenue.
 ## sat - charts + report
 
 5 plots: budget vs revenue dots, roi by genre bars, popularity vs rating dots,
-yearly mean line, franchise vs single bars.
+yearly mean line, franchise vs single bars. (+2 eda plots later)
 
-freeze at 3pm. run pytest, app/main.py, build_report.py. fill docx. submit by 8pm.
+freeze at 3pm. run pytest, python -m src.main, python -m src.build_report. fill docx. submit by 8pm.
 
 ```
 pytest
-python app/main.py
-python reports/build_report.py
+python -m src.main
+python -m src.build_report
 ```
+
+## fri 23 - polish after feedback
+
+moved all source into src/, tests into tests/. root keeps only config, data, docs,
+reports and the notebook.
+
+renamed df1/df2/df3: df_raw -> df_cleaned -> df_enriched, and each cleaning helper
+names its own copy (df_dropped, df_collection_named, df_flattened, df_typed,
+df_sane, df_released, df_ordered). the steps read like the pipeline now.
+
+added the eda section: describe() on the numeric columns, 5 histograms, 3 boxplots,
+and markdown saying what they show. the report got section 7 with charts 6-8.
+
+rebuilt the docx from the backup json and refreshed the pdf through word. pytest 31
+green, notebook runs 1-11 offline. review pass fixed clipped genre labels, the
+rankings table cells, a duplicate paragraph, and the boxplot call that only worked
+on matplotlib 3.9.
+
+docs updated: readme, study notes, pipeline walkthrough, code review, this timeline.

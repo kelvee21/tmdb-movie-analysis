@@ -2,7 +2,7 @@
 
 data/tmdb_backup.json is gitignored because it is big, so a fresh clone does
 not have it and any test that opens it fails. these records have the same shape
-the api gives back, just 4 of them instead of 18.
+the api gives back, just 6 of them instead of 18.
 
 they cover the cases the brief cares about: a franchise and a standalone movie,
 three directors, genres that repeat, and one movie with zero votes so the
@@ -108,7 +108,7 @@ def done_df():
 
 
 def fake_df():
-    """always the 4 fake records. use this when the test asserts a number."""
+    """always the 6 fake records. use this when the test asserts a number."""
     return _finish(pd.DataFrame(fake_movies()))
 
 

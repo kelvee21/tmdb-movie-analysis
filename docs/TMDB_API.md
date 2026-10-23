@@ -39,4 +39,4 @@ I keep cast names, cast_size, director, crew_size.
 ## errors
 
 200 ok. 404 skip (id 0). 401 means bad key. 429 too fast, wait and retry once.
-no internet -> use data/tmdb_backup.json.
+no internet or no key -> use data/tmdb_backup.json. live returns 0 rows -> same.

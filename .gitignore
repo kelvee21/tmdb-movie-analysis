@@ -10,8 +10,8 @@ __pycache__/
 venv/
 # Jupyter
 .ipynb_checkpoints/
-# Reports: the docx is the deliverable and is committed. The pdf, the chart
-# images and any build script are not.
+# Reports: the docx is the deliverable and is committed. The pdf and the chart
+# images are not. Build scripts live in src/.
 reports/*.pdf
 reports/*.png
 reports/*.py

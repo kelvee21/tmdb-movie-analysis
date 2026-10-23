@@ -27,6 +27,7 @@ def fetch_movie(movie_id, api_key, base_url):
         return None
 
     if r.status_code in (429, 500, 502, 503, 504):
+        # one retry only. a second 429 just skips this film.
         time.sleep(1.5)
         try:
             r = requests.get(url, params={"api_key": api_key}, timeout=TIMEOUT)

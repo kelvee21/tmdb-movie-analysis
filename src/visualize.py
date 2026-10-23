@@ -69,12 +69,12 @@ def plot_popularity_vs_rating(df):
 
 
 def plot_yearly_box_office(df):
-    df2 = df.copy()
-    df2["year"] = pd.to_datetime(df2["release_date"]).dt.year
+    df_dated = df.copy()
+    df_dated["year"] = pd.to_datetime(df_dated["release_date"]).dt.year
     years = []
     vals = []
-    for y in sorted(df2["year"].dropna().unique()):
-        part = df2[df2["year"] == y]
+    for y in sorted(df_dated["year"].dropna().unique()):
+        part = df_dated[df_dated["year"] == y]
         s = 0
         n = 0
         for v in part["revenue_musd"]:
@@ -93,15 +93,15 @@ def plot_yearly_box_office(df):
 
 
 def plot_franchise_vs_standalone(df):
+    df_labeled = df.copy()
     groups = []
-    for v in df["belongs_to_collection"]:
+    for v in df_labeled["belongs_to_collection"]:
         if pd.isna(v):
             groups.append("standalone")
         else:
             groups.append("franchise")
-    df2 = df.copy()
-    df2["group"] = groups
-    g = df2.groupby("group")["revenue_musd"].mean()
+    df_labeled["group"] = groups
+    g = df_labeled.groupby("group")["revenue_musd"].mean()
 
     labels = []
     vals = []
@@ -114,4 +114,38 @@ def plot_franchise_vs_standalone(df):
     ax.set_xlabel("group")
     ax.set_ylabel("mean revenue (musd)")
     ax.set_title("franchise vs standalone")
+    return ax
+
+
+def plot_distribution(df, column, bins=20):
+    """Histogram of one numeric column with the median marked.
+
+    eda helper: shows the shape of a column (skew, heaps at the edges)
+    before any kpi work, so later numbers get read with the spread in mind.
+    """
+    values = df[column].dropna()
+    median = values.median()
+    fig, ax = plt.subplots()
+    ax.hist(values, bins=bins)
+    if pd.notna(median):
+        ax.axvline(median, linestyle="--")
+    ax.set_xlabel(column)
+    ax.set_ylabel("movies")
+    title = f"{column} distribution"
+    if pd.notna(median):
+        title = title + f" (median={median:g})"
+    ax.set_title(title)
+    return ax
+
+
+def plot_boxplot(df, column):
+    """Horizontal boxplot of one numeric column, quick outlier view."""
+    values = df[column].dropna()
+    fig, ax = plt.subplots()
+    # no tick_labels here, that only exists in matplotlib 3.9 and the
+    # requirements allow 3.8. the column name is already on the axis.
+    ax.boxplot(values, vert=False)
+    ax.set_yticks([])
+    ax.set_xlabel(column)
+    ax.set_title(f"{column} boxplot")
     return ax

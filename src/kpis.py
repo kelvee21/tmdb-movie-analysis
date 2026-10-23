@@ -5,83 +5,84 @@ MIN_VOTES = 10
 
 
 def add_profit_roi(df):
-    df2 = df.copy()
-    df2["profit"] = df2["revenue_musd"] - df2["budget_musd"]
-    df2["roi"] = df2["revenue_musd"] / df2["budget_musd"]
-    return df2
+    df_enriched = df.copy()
+    df_enriched["profit"] = df_enriched["revenue_musd"] - df_enriched["budget_musd"]
+    df_enriched["roi"] = df_enriched["revenue_musd"] / df_enriched["budget_musd"]
+    return df_enriched
 
 
 def rank(df, col, n=5, ascending=False):
-    df2 = df.copy()
+    df_ranked = df.copy()
     if ascending:
-        df2 = df2.sort_values(by=col, ascending=True)
+        df_ranked = df_ranked.sort_values(by=col, ascending=True)
     else:
-        df2 = df2.sort_values(by=col, ascending=False)
-    return df2.head(n)
+        df_ranked = df_ranked.sort_values(by=col, ascending=False)
+    return df_ranked.head(n)
 
 
 def search_willis_scifi_action(df):
-    df2 = df.copy()
+    df_matches = df.copy()
     keep = []
-    for i in range(len(df2)):
-        row = df2.iloc[i]
+    for i in range(len(df_matches)):
+        row = df_matches.iloc[i]
         g = str(row["genres"])
         c = str(row["cast"])
         if "Science Fiction" in g and "Action" in g and "Bruce Willis" in c:
             keep.append(True)
         else:
             keep.append(False)
-    df2 = df2[keep]
-    df2 = df2.sort_values(by="vote_average", ascending=False)
-    return df2
+    df_matches = df_matches[keep]
+    df_matches = df_matches.sort_values(by="vote_average", ascending=False)
+    return df_matches
 
 
 def search_thurman_tarantino(df):
-    df2 = df.copy()
+    df_matches = df.copy()
     keep = []
-    for i in range(len(df2)):
-        row = df2.iloc[i]
+    for i in range(len(df_matches)):
+        row = df_matches.iloc[i]
         c = str(row["cast"])
         d = str(row["director"])
         if "Uma Thurman" in c and d == "Quentin Tarantino":
             keep.append(True)
         else:
             keep.append(False)
-    df2 = df2[keep]
-    df2 = df2.sort_values(by="runtime", ascending=True)
-    return df2
+    df_matches = df_matches[keep]
+    df_matches = df_matches.sort_values(by="runtime", ascending=True)
+    return df_matches
 
 
 def franchise_vs_standalone(df):
-    df2 = df.copy()
+    df_labeled = df.copy()
     groups = []
-    for v in df2["belongs_to_collection"]:
+    for v in df_labeled["belongs_to_collection"]:
         if pd.isna(v):
             groups.append("standalone")
         else:
             groups.append("franchise")
-    df2["group"] = groups
-    g = df2.groupby("group")
-    out = pd.DataFrame({
-        "movies": g.size(),
-        "mean_revenue": g["revenue_musd"].mean(),
-        "median_roi": g["roi"].median(),
-        "mean_budget": g["budget_musd"].mean(),
-        "mean_popularity": g["popularity"].mean(),
-        "mean_rating": g["vote_average"].mean(),
+    df_labeled["group"] = groups
+    grouped = df_labeled.groupby("group")
+    # roi is a median: one huge film moves the mean and not the median.
+    df_summary = pd.DataFrame({
+        "movies": grouped.size(),
+        "mean_revenue": grouped["revenue_musd"].mean(),
+        "median_roi": grouped["roi"].median(),
+        "mean_budget": grouped["budget_musd"].mean(),
+        "mean_popularity": grouped["popularity"].mean(),
+        "mean_rating": grouped["vote_average"].mean(),
     })
-    return out
+    return df_summary
 
 
 def top_franchises(df):
-    df2 = df[df["belongs_to_collection"].notna()].copy()
+    df_franchises = df[df["belongs_to_collection"].notna()].copy()
     names = []
-    for v in df2["belongs_to_collection"]:
+    for v in df_franchises["belongs_to_collection"]:
         if v not in names:
             names.append(v)
     rows = []
     for name in names:
-        part = df2[df2["belongs_to_collection"] == name]
+        part = df_franchises[df_franchises["belongs_to_collection"] == name]
         total_rev = part["revenue_musd"].sum()
         mean_rev = part["revenue_musd"].mean()
         total_bud = part["budget_musd"].sum()
@@ -96,30 +97,30 @@ def top_franchises(df):
             "mean_budget": mean_bud,
             "mean_rating": mean_rate,
         })
-    out = pd.DataFrame(rows)
-    if len(out) > 0:
-        out = out.sort_values(by="total_revenue", ascending=False)
-        out = out.reset_index(drop=True)
-    return out
+    df_summary = pd.DataFrame(rows)
+    if len(df_summary) > 0:
+        df_summary = df_summary.sort_values(by="total_revenue", ascending=False)
+        df_summary = df_summary.reset_index(drop=True)
+    return df_summary
 
 
 def top_directors(df):
-    df2 = df[df["director"].notna()].copy()
+    df_directors = df[df["director"].notna()].copy()
     names = []
-    for v in df2["director"]:
+    for v in df_directors["director"]:
         if v not in names:
             names.append(v)
     rows = []
     for name in names:
-        part = df2[df2["director"] == name]
+        part = df_directors[df_directors["director"] == name]
         rows.append({
             "director": name,
             "movies": len(part),
             "total_revenue": part["revenue_musd"].sum(),
             "mean_rating": part["vote_average"].mean(),
         })
-    out = pd.DataFrame(rows)
-    if len(out) > 0:
-        out = out.sort_values(by="total_revenue", ascending=False)
-        out = out.reset_index(drop=True)
-    return out
+    df_summary = pd.DataFrame(rows)
+    if len(df_summary) > 0:
+        df_summary = df_summary.sort_values(by="total_revenue", ascending=False)
+        df_summary = df_summary.reset_index(drop=True)
+    return df_summary

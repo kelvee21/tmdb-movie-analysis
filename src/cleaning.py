@@ -17,6 +17,8 @@ def get_collection_name(value):
 
 
 def join_names(items, key):
+    # genres and friends come in as dicts with a name key, cast comes in as
+    # plain strings. handle both so one helper can join all of them.
     if isinstance(items, list):
         names = []
         for d in items:
@@ -34,29 +36,29 @@ def join_names(items, key):
 
 
 def drop_irrelevant_columns(df):
-    df2 = df.copy()
+    df_dropped = df.copy()
     for col in DROP_COLUMNS:
-        if col in df2.columns:
-            del df2[col]
-    return df2
+        if col in df_dropped.columns:
+            del df_dropped[col]
+    return df_dropped
 
 
 def extract_collection_name(df):
-    df2 = df.copy()
+    df_collection_named = df.copy()
     out = []
-    for v in df2["belongs_to_collection"]:
+    for v in df_collection_named["belongs_to_collection"]:
         out.append(get_collection_name(v))
-    df2["belongs_to_collection"] = out
-    return df2
+    df_collection_named["belongs_to_collection"] = out
+    return df_collection_named
 
 
 def pipe_join_names(df, column, name_key):
-    df2 = df.copy()
+    df_flattened = df.copy()
     out = []
-    for v in df2[column]:
+    for v in df_flattened[column]:
         out.append(join_names(v, name_key))
-    df2[column] = out
-    return df2
+    df_flattened[column] = out
+    return df_flattened
 
 
 def inspect_anomalies(df, columns):
@@ -72,63 +74,63 @@ def inspect_anomalies(df, columns):
 
 
 def convert_dtypes(df):
-    df2 = df.copy()
-    df2["budget"] = pd.to_numeric(df2["budget"], errors="coerce")
-    df2["revenue"] = pd.to_numeric(df2["revenue"], errors="coerce")
-    df2["id"] = pd.to_numeric(df2["id"], errors="coerce")
-    df2["popularity"] = pd.to_numeric(df2["popularity"], errors="coerce")
-    df2["vote_count"] = pd.to_numeric(df2["vote_count"], errors="coerce")
-    df2["vote_average"] = pd.to_numeric(df2["vote_average"], errors="coerce")
-    df2["runtime"] = pd.to_numeric(df2["runtime"], errors="coerce")
-    df2["release_date"] = pd.to_datetime(df2["release_date"], errors="coerce")
-    return df2
+    df_typed = df.copy()
+    df_typed["budget"] = pd.to_numeric(df_typed["budget"], errors="coerce")
+    df_typed["revenue"] = pd.to_numeric(df_typed["revenue"], errors="coerce")
+    df_typed["id"] = pd.to_numeric(df_typed["id"], errors="coerce")
+    df_typed["popularity"] = pd.to_numeric(df_typed["popularity"], errors="coerce")
+    df_typed["vote_count"] = pd.to_numeric(df_typed["vote_count"], errors="coerce")
+    df_typed["vote_average"] = pd.to_numeric(df_typed["vote_average"], errors="coerce")
+    df_typed["runtime"] = pd.to_numeric(df_typed["runtime"], errors="coerce")
+    df_typed["release_date"] = pd.to_datetime(df_typed["release_date"], errors="coerce")
+    return df_typed
 
 
 def clean_unrealistic_values(df):
-    df2 = df.copy()
+    df_sane = df.copy()
     for col in ["budget", "revenue", "runtime"]:
-        df2[col] = df2[col].replace(0, float("nan"))
-    df2["budget_musd"] = df2["budget"] / 1000000
-    df2["revenue_musd"] = df2["revenue"] / 1000000
+        df_sane[col] = df_sane[col].replace(0, float("nan"))
+    df_sane["budget_musd"] = df_sane["budget"] / 1000000
+    df_sane["revenue_musd"] = df_sane["revenue"] / 1000000
     # a movie with no votes has a vote_average that means nothing, so it goes
     # to NaN. .loc not .iloc, chained assignment is dropped by pandas 3.
-    no_votes = df2["vote_count"] == 0
-    df2.loc[no_votes, "vote_average"] = float("nan")
+    no_votes = df_sane["vote_count"] == 0
+    df_sane.loc[no_votes, "vote_average"] = float("nan")
     for col in ["overview", "tagline"]:
-        if col in df2.columns:
-            df2[col] = df2[col].replace("No Data", float("nan"))
-            df2[col] = df2[col].replace("", float("nan"))
-    return df2
+        if col in df_sane.columns:
+            df_sane[col] = df_sane[col].replace("No Data", float("nan"))
+            df_sane[col] = df_sane[col].replace("", float("nan"))
+    return df_sane
 
 
 def filter_released_and_dedup(df):
-    df2 = df.copy()
-    df2 = df2[df2["status"] == "Released"]
-    if "status" in df2.columns:
-        del df2["status"]
-    df2 = df2.drop_duplicates(subset=["id", "title"])
-    df2 = df2.dropna(subset=["id", "title"])
-    df2 = df2.dropna(thresh=10)
-    return df2
+    df_released = df.copy()
+    df_released = df_released[df_released["status"] == "Released"]
+    if "status" in df_released.columns:
+        del df_released["status"]
+    df_released = df_released.drop_duplicates(subset=["id", "title"])
+    df_released = df_released.dropna(subset=["id", "title"])
+    df_released = df_released.dropna(thresh=10)
+    return df_released
 
 
 def reorder_and_reset(df):
-    df2 = df[FINAL_COLUMNS].copy()
-    df2 = df2.reset_index(drop=True)
-    return df2
+    df_ordered = df[FINAL_COLUMNS].copy()
+    df_ordered = df_ordered.reset_index(drop=True)
+    return df_ordered
 
 
 def clean(df):
-    df2 = df.copy()
-    df2 = drop_irrelevant_columns(df2)
-    df2 = extract_collection_name(df2)
-    df2 = pipe_join_names(df2, "genres", "name")
-    df2 = pipe_join_names(df2, "spoken_languages", "english_name")
-    df2 = pipe_join_names(df2, "production_countries", "name")
-    df2 = pipe_join_names(df2, "production_companies", "name")
-    df2 = pipe_join_names(df2, "cast", "name")
-    df2 = convert_dtypes(df2)
-    df2 = clean_unrealistic_values(df2)
-    df2 = filter_released_and_dedup(df2)
-    df2 = reorder_and_reset(df2)
-    return df2
+    df_current = df.copy()
+    df_current = drop_irrelevant_columns(df_current)
+    df_current = extract_collection_name(df_current)
+    df_current = pipe_join_names(df_current, "genres", "name")
+    df_current = pipe_join_names(df_current, "spoken_languages", "english_name")
+    df_current = pipe_join_names(df_current, "production_countries", "name")
+    df_current = pipe_join_names(df_current, "production_companies", "name")
+    df_current = pipe_join_names(df_current, "cast", "name")
+    df_current = convert_dtypes(df_current)
+    df_current = clean_unrealistic_values(df_current)
+    df_current = filter_released_and_dedup(df_current)
+    df_current = reorder_and_reset(df_current)
+    return df_current

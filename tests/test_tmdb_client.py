@@ -1,4 +1,5 @@
-from tmdb_client import MOVIE_IDS, fetch_movie, load_offline_backup
+import src.tmdb_client as tmdb_client
+from src.tmdb_client import MOVIE_IDS, fetch_movie, load_offline_backup
 
 
 class FakeResponse:
@@ -29,8 +30,6 @@ def test_movie_ids_match_lab_spec():
 
 
 def test_fetch_movie_merges_credits(monkeypatch):
-    import tmdb_client
-
     fake_movie = {"id": 597, "title": "Titanic", "budget": 200000000}
     fake_credits = {
         "cast": [{"name": "A"}, {"name": "B"}],
@@ -50,8 +49,6 @@ def test_fetch_movie_merges_credits(monkeypatch):
 
 
 def test_fetch_movie_404_returns_none(monkeypatch):
-    import tmdb_client
-
     def fake_get_404(url, params=None, timeout=None):
         return FakeResponse(None, 404)
 
